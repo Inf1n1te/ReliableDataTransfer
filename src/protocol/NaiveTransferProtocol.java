@@ -87,16 +87,21 @@ public class NaiveTransferProtocol implements IDataTransferProtocol,
 	 */
 	private boolean SendData() {
 		// Max packet size is 1024
+		byte[] readDataNew = new byte[1024];
 		byte[] readData = new byte[1024];
-//		System.out.println("begin seq: " + seq);
 		try {
 			int readSize;
 			if (!timeOut) {
-				readSize = inputStream.read(readData);
+				readSize = inputStream.read(readDataNew);
 
 				if (readSize >= 0) {
 					if (!timeOut) {
+						if (readSize < 1024) {
+							readData = new byte[readSize];
+						}
+						System.arraycopy(readDataNew, 0, readData, 0, readSize);
 						// We read some bytes, send the packet
+						System.out.println(Arrays.toString(readData));
 						byte[] totalPacket = new byte[readData.length + 1];
 						totalPacket[0] = (byte) seq;
 						System.arraycopy(readData, 0, totalPacket, 1,
@@ -106,7 +111,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol,
 							System.out.println("Failure transmitting");
 							return true;
 						}
-						Utils.Timeout.SetTimeout(300, this,
+						Utils.Timeout.SetTimeout(100, this,
 								seq);
 						sent = true;
 						seq++;
@@ -152,7 +157,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol,
 					System.out.println("Failure transmitting");
 					return true;
 				}
-				Utils.Timeout.SetTimeout(300, this, seq);
+				Utils.Timeout.SetTimeout(100, this, seq);
 				sent = true;
 				timeOut = false;
 				seq++;
@@ -162,7 +167,6 @@ public class NaiveTransferProtocol implements IDataTransferProtocol,
 			System.out.println("Error reading the file: " + e.getMessage());
 			return true;
 		}
-//		System.out.println("eind seq: " + seq);
 		// Signal that work is not completed yet
 		return false;
 	}
@@ -221,24 +225,6 @@ public class NaiveTransferProtocol implements IDataTransferProtocol,
 		Packet receivedPacket = networkLayer.Receive();
 		if (receivedPacket != null) {
 			byte[] data = receivedPacket.GetData();
-			System.out.println(Arrays.toString(data));
-
-			// If the data packet was empty, we are done
-			// if (data.length == 0) {
-			// try {
-			// // Close the file
-			// outputStream.close();
-			// } catch (IOException e) {
-			// e.printStackTrace();
-			// }
-			//
-			// // Signal that work is done
-			// return true;
-			// }
-//			System.out.println("ack: " + data[0]);
-//			System.out.println("seq: " + seq);
-//			System.out.println("seq - 1: " + (seq - 1));
-//			System.out.println(data[0] == seq - 1);
 			if (data[0] == seq - 1) {
 				sent = false;
 			}

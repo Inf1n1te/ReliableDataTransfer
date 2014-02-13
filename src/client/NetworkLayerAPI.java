@@ -27,7 +27,7 @@ public class NetworkLayerAPI implements INetworkLayerAPI {
 		if (packet.GetData().length > MAX_PACKET_SIZE) {
 			return TransmissionResult.Failure;
 		}
-		System.out.println(Arrays.toString(packet.GetData()));
+//		System.out.println(Arrays.toString(packet.GetData()));
 		lock.lock();
 		TransmissionResult result = client.Transmit(packet);
 		lock.unlock();
