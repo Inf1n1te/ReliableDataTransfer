@@ -2,6 +2,7 @@ package protocol;
 
 import java.io.*;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 import client.*;
 import client.INetworkLayerAPI.TransmissionResult;
@@ -133,7 +134,15 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		// Signal that work is not completed yet
 		return false;
 	}
-
+	
+	public static int[] byteToIntArray(byte[] byteArray){
+		int[] intArray = new int[byteArray.length];
+		for (int i = 0; i < byteArray.length; i++){
+			intArray[i] = byteArray[i] & 0xff;
+		}
+		System.out.println(intArray);
+		return intArray;
+	}
 	/**
 	 * Handles receiving of data packets and writing data to the output file
 	 * 
@@ -144,6 +153,8 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		Packet receivedPacket = networkLayer.Receive();
 		if (receivedPacket != null) {
 			byte[] data = receivedPacket.GetData();
+			System.out.println(Arrays.toString(data));
+			//byteToIntArray(data);
 
 			// If the data packet was empty, we are done
 			if (data.length == 0) {
