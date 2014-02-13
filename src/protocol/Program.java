@@ -22,11 +22,11 @@ import client.*;
 public class Program {
 
 	// Change to your group number (e.g. use a student number)
-	private static int groupId = 123;
+	private static int groupId = 1472348;
 
 	// Change to your group password (doesn't matter what it is,
 	// as long as everyone in the group uses the same string)
-	private static String password = "testpass";
+	private static String password = "hoihoi";
 
 	// Change to your protocol implementation
 	private static IDataTransferProtocol protocol = new NaiveTransferProtocol();
