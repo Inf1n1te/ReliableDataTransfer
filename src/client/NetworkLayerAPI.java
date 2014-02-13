@@ -1,5 +1,6 @@
 package client;
 
+import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -13,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class NetworkLayerAPI implements INetworkLayerAPI {
 
-	public static int MAX_PACKET_SIZE = 1024;
+	public static int MAX_PACKET_SIZE = 1024 + 1;
 	private ReliableDataTransferClient client;
 	private ReentrantLock lock = new ReentrantLock();
 
@@ -26,7 +27,7 @@ public class NetworkLayerAPI implements INetworkLayerAPI {
 		if (packet.GetData().length > MAX_PACKET_SIZE) {
 			return TransmissionResult.Failure;
 		}
-		
+		System.out.println(Arrays.toString(packet.GetData()));
 		lock.lock();
 		TransmissionResult result = client.Transmit(packet);
 		lock.unlock();

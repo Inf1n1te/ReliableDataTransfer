@@ -19,6 +19,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 	private INetworkLayerAPI networkLayer;
 	private int bytesSent = 0;
 	private TransferMode transferMode;
+	private int seq = -128;
 	FileInputStream inputStream;
 	FileOutputStream outputStream;
 
@@ -88,7 +89,13 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 
 			if (readSize >= 0) {
 				// We read some bytes, send the packet
-				if (networkLayer.Transmit(new Packet(readData)) == TransmissionResult.Failure) {
+				byte[] totalPacket = new byte[readData.length + 1];
+				totalPacket[0] = (byte) seq;
+					seq++;
+
+				System.arraycopy(readData, 0, totalPacket, 1, readData.length);
+				Packet toBeSent = new Packet(totalPacket);
+				if (networkLayer.Transmit(toBeSent) == TransmissionResult.Failure) {
 					System.out.println("Failure transmitting");
 					return true;
 				}
@@ -154,7 +161,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		if (receivedPacket != null) {
 			byte[] data = receivedPacket.GetData();
 			System.out.println(Arrays.toString(data));
-			//byteToIntArray(data);
+//			byteToIntArray(data);
 
 			// If the data packet was empty, we are done
 			if (data.length == 0) {
