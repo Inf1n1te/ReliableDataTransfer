@@ -22,7 +22,7 @@ import client.*;
 public class Program {
 
 	// Change to your group number (e.g. use a student number)
-	private static int groupId = 1472348; 
+	private static int groupId = 14723481; 
 
 	// Change to your group password (doesn't matter what it is,
 	// as long as everyone in the group uses the same string)
@@ -39,6 +39,10 @@ public class Program {
 
 	// Challenge server port
 	private static int serverPort = 8003;
+	
+	public static TransferMode getTransferMode() {
+		return transferMode;
+	}
 
 	/*
 	 * 
