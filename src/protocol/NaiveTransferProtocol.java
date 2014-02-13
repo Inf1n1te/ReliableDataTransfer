@@ -16,18 +16,27 @@ import client.INetworkLayerAPI.TransmissionResult;
  * @version 23-01-2014
  * 
  */
-public class NaiveTransferProtocol implements IDataTransferProtocol {
+public class NaiveTransferProtocol implements IDataTransferProtocol,
+		ITimeoutEventHandler {
 	private INetworkLayerAPI networkLayer;
 	private int bytesSent = 0;
 	private TransferMode transferMode;
 	private int seq = -128;
 	private LinkedList<Byte> seqnums = new LinkedList<Byte>();
 	byte[] finalArray;
+	private boolean sent = false;
+	private boolean timeOut = false;
+	private Packet lastPacket;
 	FileInputStream inputStream;
 	FileOutputStream outputStream;
 
 	@Override
 	public void TimeoutElapsed(Object tag) {
+		if ((int) tag == (seq - 1)) {
+			seq--;
+			sent = false;
+			timeOut = true;
+		}
 	}
 
 	@Override
@@ -63,8 +72,10 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 
 	@Override
 	public boolean Tick() {
-		if (this.transferMode == TransferMode.Send) {
+		if (this.transferMode == TransferMode.Send && sent) {
 			// Send mode
+			return ReceiveAck();
+		} else if (this.transferMode == TransferMode.Send) {
 			return SendData();
 		} else {
 			// Receive mode
@@ -78,64 +89,86 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 	 * @return whether work has been completed
 	 */
 	private boolean SendData() {
-
 		// Max packet size is 1024
+		byte[] readDataNew = new byte[1024];
 		byte[] readData = new byte[1024];
-
 		try {
-			int readSize = inputStream.read(readData);
+			int readSize;
+			if (!timeOut) {
+				readSize = inputStream.read(readDataNew);
 
-			if (readSize >= 0) {
-				// We read some bytes, send the packet
-				byte[] totalPacket = new byte[readData.length + 1];
-				totalPacket[0] = (byte) seq;
-				seq++;
+				if (readSize >= 0) {
+					if (!timeOut) {
+						if (readSize < 1024) {
+							readData = new byte[readSize];
+						}
+						System.arraycopy(readDataNew, 0, readData, 0, readSize);
+						// We read some bytes, send the packet
+						System.out.println(Arrays.toString(readData));
+						byte[] totalPacket = new byte[readData.length + 1];
+						totalPacket[0] = (byte) seq;
+						System.arraycopy(readData, 0, totalPacket, 1,
+								readData.length);
+						Packet toBeSent = new Packet(totalPacket);
+						if (networkLayer.Transmit(toBeSent) == TransmissionResult.Failure) {
+							System.out.println("Failure transmitting");
+							return true;
+						}
+						Utils.Timeout.SetTimeout(100, this, seq);
+						sent = true;
+						seq++;
+						lastPacket = toBeSent;
+					}
+				} else {
+					// readSize == -1 means End-Of-File
+					try {
+						// Send empty packet, to signal transmission end. Send
+						// it a
+						// bunch of times to make sure it arrives
+						networkLayer.Transmit(new Packet(new byte[] {}));
+						networkLayer.Transmit(new Packet(new byte[] {}));
+						networkLayer.Transmit(new Packet(new byte[] {}));
+						networkLayer.Transmit(new Packet(new byte[] {}));
+						networkLayer.Transmit(new Packet(new byte[] {}));
 
-				System.arraycopy(readData, 0, totalPacket, 1, readData.length);
-				Packet toBeSent = new Packet(totalPacket);
-				if (networkLayer.Transmit(toBeSent) == TransmissionResult.Failure) {
+						// Close the file
+						inputStream.close();
+
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+					// Return true to signal work done
+					return true;
+				}
+
+				// Print how far along we are
+				bytesSent += readSize;
+
+				// Get the file size
+				File file = new File(Paths.get("").toAbsolutePath()
+						+ "/tobesent.dat");
+
+				// Print the percentage of file transmitted
+				System.out.println("Sent: "
+						+ (int) (bytesSent * 100 / (double) file.length())
+						+ "%");
+
+			} else if (timeOut) {
+				if (networkLayer.Transmit(lastPacket) == TransmissionResult.Failure) {
 					System.out.println("Failure transmitting");
 					return true;
 				}
-			} else {
-				// readSize == -1 means End-Of-File
-				try {
-					// Send empty packet, to signal transmission end. Send it a
-					// bunch of times to make sure it arrives
-					networkLayer.Transmit(new Packet(new byte[] {}));
-					networkLayer.Transmit(new Packet(new byte[] {}));
-					networkLayer.Transmit(new Packet(new byte[] {}));
-					networkLayer.Transmit(new Packet(new byte[] {}));
-					networkLayer.Transmit(new Packet(new byte[] {}));
-
-					// Close the file
-					inputStream.close();
-
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-
-				// Return true to signal work done
-				return true;
+				Utils.Timeout.SetTimeout(100, this, seq);
+				sent = true;
+				timeOut = false;
+				seq++;
 			}
-
-			// Print how far along we are
-			bytesSent += readSize;
-
-			// Get the file size
-			File file = new File(Paths.get("").toAbsolutePath()
-					+ "/tobesent.dat");
-
-			// Print the percentage of file transmitted
-			System.out.println("Sent: "
-					+ (int) (bytesSent * 100 / (double) file.length()) + "%");
-
 		} catch (IOException e) {
 			// We encountered an error while reading the file. Stop work.
 			System.out.println("Error reading the file: " + e.getMessage());
 			return true;
 		}
-
 		// Signal that work is not completed yet
 		return false;
 	}
@@ -165,7 +198,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 				byte[] finalArray = new byte[data.length - 1];
 				System.arraycopy(data, 1, finalArray, 0, data.length - 1);
 				// System.out.println(Arrays.toString(data));
-				//System.out.println(Arrays.toString(finalArray));
+				// System.out.println(Arrays.toString(finalArray));
 
 				try {
 					System.out.println(Arrays.toString(finalArray));
@@ -193,6 +226,19 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 
 			// Write the data to the output file
 
+		}
+
+		return false;
+	}
+
+	private boolean ReceiveAck() {
+		// Receive a data packet
+		Packet receivedPacket = networkLayer.Receive();
+		if (receivedPacket != null) {
+			byte[] data = receivedPacket.GetData();
+			if (data[0] == seq - 1) {
+				sent = false;
+			}
 		}
 
 		return false;
