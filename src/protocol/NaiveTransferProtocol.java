@@ -153,7 +153,18 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		if (receivedPacket != null) {
 			byte[] data = receivedPacket.GetData();
 			System.out.println(Arrays.toString(data));
-			System.out.println("Current packet: " + data[0]);
+			if (data.length!=0) {
+				System.out.println("Current packet: " + data[0]);
+				// receiver sends back
+				byte[] responsePacket = new byte[] { data[0] };
+				Packet response = new Packet(responsePacket);
+				if (networkLayer.Transmit(response) == TransmissionResult.Failure) {
+					System.out.println("Failure transmitting");
+					return true;
+				}
+			}
+			
+			
 			//byteToIntArray(data);
 
 
