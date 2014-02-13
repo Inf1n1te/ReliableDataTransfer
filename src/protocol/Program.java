@@ -22,7 +22,7 @@ import client.*;
 public class Program {
 
 	// Change to your group number (e.g. use a student number)
-	private static int groupId = 1472348;
+	private static int groupId = 1472348; 
 
 	// Change to your group password (doesn't matter what it is,
 	// as long as everyone in the group uses the same string)
@@ -32,7 +32,7 @@ public class Program {
 	private static IDataTransferProtocol protocol = new NaiveTransferProtocol();
 
 	// Whether this program should send or receive
-	private static TransferMode transferMode = TransferMode.Receive;
+	private static TransferMode transferMode = TransferMode.Send;
 
 	// Challenge server address
 	private static String serverAddress = "dacs-stud03.ewi.utwente.nl";
