@@ -32,7 +32,7 @@ public class Program {
 	private static IDataTransferProtocol protocol = new NaiveTransferProtocol();
 
 	// Whether this program should send or receive
-	private static TransferMode transferMode = TransferMode.Receive;
+	private static TransferMode transferMode = TransferMode.Send;
 
 	// Challenge server address
 	private static String serverAddress = "dacs-stud03.ewi.utwente.nl";
@@ -88,8 +88,15 @@ public class Program {
 			}
 		}
 
-		long fileLength = new File("received.dat").length();
-		FileInputStream input = new FileInputStream("received.dat");
+		long fileLength;
+		FileInputStream input;
+		if (transferMode == TransferMode.Receive) {
+			fileLength = new File("received.dat").length();
+			input = new FileInputStream("received.dat");
+		} else {
+			fileLength = new File("tobesent.dat").length();
+			input = new FileInputStream("tobesent.dat");
+		}
 		byte[] fileContent = new byte[(int) fileLength + 4];
 		input.read(fileContent, 4, (int) fileLength);
 

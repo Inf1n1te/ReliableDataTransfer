@@ -13,4 +13,3 @@ Or from command line using these commands:
  - javac client\*.java
  - javac protocol\*.java
  - java protocol.Program
-kljklj
