@@ -135,14 +135,6 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		return false;
 	}
 	
-	public static int[] byteToIntArray(byte[] byteArray){
-		int[] intArray = new int[byteArray.length];
-		for (int i = 0; i < byteArray.length; i++){
-			intArray[i] = byteArray[i] & 0xff;
-		}
-		System.out.println(intArray);
-		return intArray;
-	}
 	/**
 	 * Handles receiving of data packets and writing data to the output file
 	 * 
@@ -154,6 +146,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		if (receivedPacket != null) {
 			byte[] data = receivedPacket.GetData();
 			System.out.println(Arrays.toString(data));
+			System.out.println("Current packet: " + data[0]);
 			//byteToIntArray(data);
 
 			// If the data packet was empty, we are done
