@@ -3,6 +3,7 @@ package protocol;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 import client.*;
 import client.INetworkLayerAPI.TransmissionResult;
@@ -20,21 +21,20 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 	private int bytesSent = 0;
 	private TransferMode transferMode;
 	private int seq = -128;
+	private LinkedList<Byte> seqnums = new LinkedList<Byte>();
+	byte[] finalArray;
 	FileInputStream inputStream;
 	FileOutputStream outputStream;
 
-	
 	@Override
 	public void TimeoutElapsed(Object tag) {
 	}
 
-	
 	@Override
 	public void SetNetworkLayerAPI(INetworkLayerAPI networkLayer) {
 		this.networkLayer = networkLayer;
 	}
 
-	
 	@Override
 	public void Initialize(TransferMode transferMode) {
 		this.transferMode = transferMode;
@@ -61,7 +61,6 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		}
 	}
 
-	
 	@Override
 	public boolean Tick() {
 		if (this.transferMode == TransferMode.Send) {
@@ -73,7 +72,6 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		}
 	}
 
-	
 	/**
 	 * Handles sending of data from the input file
 	 * 
@@ -91,7 +89,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 				// We read some bytes, send the packet
 				byte[] totalPacket = new byte[readData.length + 1];
 				totalPacket[0] = (byte) seq;
-					seq++;
+				seq++;
 
 				System.arraycopy(readData, 0, totalPacket, 1, readData.length);
 				Packet toBeSent = new Packet(totalPacket);
@@ -116,7 +114,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				
+
 				// Return true to signal work done
 				return true;
 			}
@@ -141,7 +139,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		// Signal that work is not completed yet
 		return false;
 	}
-	
+
 	/**
 	 * Handles receiving of data packets and writing data to the output file
 	 * 
@@ -152,9 +150,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 		Packet receivedPacket = networkLayer.Receive();
 		if (receivedPacket != null) {
 			byte[] data = receivedPacket.GetData();
-			System.out.println(Arrays.toString(data));
-			if (data.length!=0) {
-				System.out.println("Current packet: " + data[0]);
+			if (data.length != 0) {
 				// receiver sends back
 				byte[] responsePacket = new byte[] { data[0] };
 				Packet response = new Packet(responsePacket);
@@ -163,11 +159,25 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 					return true;
 				}
 			}
-			
-			
-			//byteToIntArray(data);
+			if (data.length > 0 && !seqnums.contains(data[0])) {
+				seqnums.add(data[0]);
+				System.out.println("Current packet: " + data[0]);
+				byte[] finalArray = new byte[data.length - 1];
+				System.arraycopy(data, 1, finalArray, 0, data.length - 1);
+				// System.out.println(Arrays.toString(data));
+				//System.out.println(Arrays.toString(finalArray));
 
+				try {
+					System.out.println(Arrays.toString(finalArray));
+					outputStream.write(finalArray, 0, finalArray.length);
+					outputStream.flush();
+				} catch (IOException e) {
+					System.out.println("Failure writing to file: "
+							+ e.getMessage());
+					return true;
+				}
 
+			}
 			// If the data packet was empty, we are done
 			if (data.length == 0) {
 				try {
@@ -182,14 +192,7 @@ public class NaiveTransferProtocol implements IDataTransferProtocol {
 			}
 
 			// Write the data to the output file
-			try {
-				outputStream.write(data, 0, data.length);
-				outputStream.flush();
-			} catch (IOException e) {
-				System.out
-						.println("Failure writing to file: " + e.getMessage());
-				return true;
-			}
+
 		}
 
 		return false;
